@@ -1,0 +1,56 @@
+# L11 - IaC on GitHub Actions: lint -> validate -> what-if (no deploy)
+# OIDC login with user-assigned managed identity id-az400-pipelines (Contributor on rg-az400-11 only)
+# Federated credential subject (immutable format):
+#   repo:ThanhTri1998@69118997/az400-lab@1432799445:environment:l11-infra
+name: l11-iac-whatif
+on:
+  workflow_dispatch:
+    inputs:
+      resourceGroup:
+        description: Target resource group
+        default: rg-az400-11
+
+permissions:
+  id-token: write   # OIDC token for azure/login
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bicep lint (bicepconfig.json rules at level=error fail the job)
+        run: |
+          az bicep install
+          az bicep lint --file infra/l11/main.bicep
+          az bicep build --file infra/l11/main.bicep --stdout > /dev/null
+
+  whatif:
+    needs: lint
+    runs-on: ubuntu-latest
+    environment: l11-infra          # => OIDC sub ends with :environment:l11-infra
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Preflight validate
+        run: |
+          az deployment group validate -g ${{ inputs.resourceGroup }} \
+            --template-file infra/l11/main.bicep --parameters infra/l11/main.bicepparam \
+            --query "properties.provisioningState" -o tsv
+      - name: What-if
+        run: |
+          az deployment group what-if -g ${{ inputs.resourceGroup }} \
+            --template-file infra/l11/main.bicep --parameters infra/l11/main.bicepparam \
+            --exclude-change-types Ignore NoChange | tee whatif.txt
+          # Public repo: mask subscription IDs before publishing summary/artifact
+          sed -i 's#/subscriptions/[^/]*#/subscriptions/***#g' whatif.txt
+          # Job summary: shows the plan on the run page (like a PR comment)
+          { echo '## What-if result'; echo '```'; grep -v '^Note\|aka.ms' whatif.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: whatif
+          path: whatif.txt
