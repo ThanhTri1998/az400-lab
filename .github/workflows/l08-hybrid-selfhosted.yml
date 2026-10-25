@@ -1,0 +1,27 @@
+# L08 - Hybrid workflow: build on GitHub-hosted, test on a self-hosted runner (lab Mac).
+# WARNING: this repo is PUBLIC. The self-hosted runner is registered only for the demo and removed
+# immediately afterwards. workflow_dispatch only (no pull_request trigger -> fork PRs can't reach it).
+name: l08-hybrid-selfhosted
+on: workflow_dispatch
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - run: mkdir -p out && echo "built on ${{ runner.name }} (${{ runner.os }}) at $(date -u)" > out/build-info.txt
+    - uses: actions/upload-artifact@v4
+      with: { name: build-info, path: out, retention-days: 1 }
+
+  test-selfhosted:
+    needs: build
+    runs-on: [ self-hosted, macOS, ARM64 ]   # every label must match
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/download-artifact@v4
+      with: { name: build-info }
+    - run: |
+        echo "runner=${{ runner.name }} os=${{ runner.os }} arch=${{ runner.arch }}"
+        cat build-info.txt
+        node -v
+        npm ci --no-audit --no-fund && npx jest --ci

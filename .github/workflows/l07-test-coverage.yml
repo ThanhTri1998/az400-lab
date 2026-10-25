@@ -1,0 +1,64 @@
+# L07 - Tests + test report + coverage summary + coverage gate in GitHub Actions
+name: l07-test-coverage
+on:
+  workflow_dispatch:
+    inputs:
+      injectFailure:
+        type: boolean
+        default: false
+      coverageGate:
+        description: Minimum % line coverage (0 = off)
+        type: number
+        default: 0
+
+permissions:
+  contents: read
+  checks: write          # dorny/test-reporter creates a check run with the test table
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with: { node-version: 20, cache: npm }
+    - run: npm ci --no-audit --no-fund
+
+    - if: ${{ inputs.injectFailure }}
+      run: echo "test('injected failure for the lab', () => { expect(1 + 1).toBe(3); });" > test/injected.test.js
+
+    - name: Run tests
+      run: |
+        if [ "${{ inputs.coverageGate }}" != "0" ]; then
+          npm run test:ci -- --coverageThreshold='{"global":{"lines":${{ inputs.coverageGate }}}}'
+        else
+          npm run test:ci
+        fi
+
+    - name: Test report
+      if: ${{ !cancelled() }}          # like succeededOrFailed()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Jest results
+        path: test-results/junit.xml
+        reporter: jest-junit
+
+    - name: Coverage summary
+      if: ${{ !cancelled() }}
+      run: |
+        python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+        import xml.etree.ElementTree as ET
+        r = ET.parse('coverage/cobertura-coverage.xml').getroot()
+        print('### Code coverage')
+        print(f"- Line rate: {float(r.get('line-rate'))*100:.1f}% ({r.get('lines-covered')}/{r.get('lines-valid')})")
+        print(f"- Branch rate: {float(r.get('branch-rate'))*100:.1f}% ({r.get('branches-covered')}/{r.get('branches-valid')})")
+        PY
+
+    - uses: actions/upload-artifact@v4
+      if: ${{ !cancelled() }}
+      with:
+        name: test-and-coverage
+        retention-days: 3
+        path: |
+          test-results/
+          coverage/

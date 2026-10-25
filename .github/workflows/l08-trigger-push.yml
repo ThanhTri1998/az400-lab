@@ -1,0 +1,18 @@
+# L08 - push trigger demo with a path filter limited to l08/trigger-demo/**
+# Disabled with `gh workflow disable` after the demo.
+name: l08-trigger-push
+on:
+  push:
+    branches: [ main ]
+    paths: [ 'l08/trigger-demo/**' ]
+permissions:
+  contents: read
+jobs:
+  show:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with: { fetch-depth: 1 }
+    - run: |
+        echo "event=${{ github.event_name }} ref=${{ github.ref }} sha=${{ github.sha }}"
+        cat l08/trigger-demo/*.txt

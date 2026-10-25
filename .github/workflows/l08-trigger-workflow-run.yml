@@ -1,0 +1,18 @@
+# L08 - workflow_run trigger: runs when "l08-trigger-push" completes (like a pipeline resource trigger)
+name: l08-trigger-workflow-run
+on:
+  workflow_run:
+    workflows: [ l08-trigger-push ]
+    types: [ completed ]
+    branches: [ main ]
+permissions:
+  contents: read
+jobs:
+  downstream:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        echo "event=${{ github.event_name }}"
+        echo "upstream workflow=${{ github.event.workflow_run.name }} run_id=${{ github.event.workflow_run.id }}"
+        echo "upstream conclusion=${{ github.event.workflow_run.conclusion }} head_sha=${{ github.event.workflow_run.head_sha }}"

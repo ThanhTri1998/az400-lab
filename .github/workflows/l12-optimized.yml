@@ -1,0 +1,25 @@
+# L12 - Optimized GitHub Actions workflow: shallow checkout, npm cache, timeout, concurrency.
+name: l12-optimized
+on:
+  workflow_dispatch:
+    inputs:
+      useCache:
+        type: boolean
+        default: true
+permissions:
+  contents: read
+concurrency:
+  group: l12-${{ github.ref }}
+  cancel-in-progress: true          # a newer run cancels the one in progress
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10              # default is 360
+    steps:
+    - uses: actions/checkout@v4      # fetch-depth: 1 is already the default
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        cache: ${{ inputs.useCache && 'npm' || '' }}   # caches ~/.npm keyed on package-lock.json
+    - run: npm ci --no-audit --no-fund --prefer-offline
+    - run: npm test -- --ci
