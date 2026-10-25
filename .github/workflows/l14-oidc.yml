@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: l14-azure            # => token sub = repo:ThanhTri1998/az400-lab:environment:l14-azure (matches)
     steps:
-      - name: Show OIDC claims (non-secret: sub, aud, iss)
+      - name: "Show OIDC claims (non-secret: sub, aud, iss)"
         run: |
           TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
             "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
@@ -48,7 +48,7 @@ jobs:
         run: |
           echo "API_KEY = $API_KEY"
           echo "length  = ${#API_KEY}"
-      - name: Values from elsewhere need ::add-mask::
+      - name: "Values from elsewhere need ::add-mask::"
         run: |
           RUNTIME_VALUE="rt-$(openssl rand -hex 6)"     # throwaway random value, not a real secret
           echo "before add-mask: $RUNTIME_VALUE"
