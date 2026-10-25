@@ -1,0 +1,45 @@
+# L15: CodeQL ADVANCED setup (a workflow you own) - versus DEFAULT setup (toggle in Settings, no YAML).
+# Only one of them can upload CodeQL results for a repo: default setup must be disabled first.
+name: l15-codeql
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    paths: ["src/**", "l15/**", ".github/workflows/l15-codeql.yml"]
+permissions:
+  contents: read
+  security-events: write      # REQUIRED to upload SARIF to code scanning
+  actions: read
+jobs:
+  analyze:
+    name: CodeQL (runner VM)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript      # interpreted language -> build-mode: none (no build needed)
+          build-mode: none
+          queries: security-extended            # default | security-extended | security-and-quality
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript"
+
+  analyze-in-container:
+    # Exam bullet: "configure an action to run CodeQL analysis in a container".
+    # `container:` makes every step run INSIDE this image on a Linux runner (only Linux runners support it).
+    name: CodeQL (inside node:20 container)
+    runs-on: ubuntu-latest
+    container:
+      image: node:20                            # full Debian image: has git, curl, tar that CodeQL needs
+    steps:
+      - uses: actions/checkout@v4
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"   # repo owned by another uid in container
+      - run: node --version && cat /etc/os-release | head -2
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: javascript-typescript
+          build-mode: none
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:javascript-typescript/container"   # distinct category, otherwise the 2 jobs overwrite each other

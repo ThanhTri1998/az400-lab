@@ -1,0 +1,21 @@
+# L15: Dependency review = SCA at PR time. Compares the dependency diff (base vs head) against the
+# GitHub Advisory Database + license data and FAILS the PR before the vulnerable package reaches main.
+name: l15-dependency-review
+on:
+  pull_request:
+    branches: [main]
+    paths: ["package.json", "package-lock.json", "l15/**", ".github/workflows/l15-dependency-review.yml"]
+permissions:
+  contents: read
+  pull-requests: write        # only needed for comment-summary-in-pr
+jobs:
+  dependency-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: moderate          # low | moderate | high | critical
+          # License compliance: allow-list (allow-licenses and deny-licenses are mutually exclusive)
+          allow-licenses: MIT, ISC, Apache-2.0, BSD-2-Clause, BSD-3-Clause, 0BSD, CC0-1.0, BlueOak-1.0.0, Python-2.0, CC-BY-4.0
+          comment-summary-in-pr: always       # posts a summary comment on the PR

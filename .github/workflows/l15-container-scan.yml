@@ -1,0 +1,70 @@
+# L15: build the app image, scan it with Trivy (OS packages + language packages in the image),
+# upload SARIF to GitHub code scanning (Security tab), and fail the job on CRITICAL findings.
+name: l15-container-scan
+on:
+  workflow_dispatch:
+    inputs:
+      base_image:
+        description: "Base image to build from (try node:16-alpine to see findings)"
+        default: "node:22-alpine"
+permissions:
+  contents: read
+  security-events: write      # upload SARIF
+jobs:
+  build-and-scan:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE: az400-app:${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image (not pushed anywhere)
+        run: docker build -f l15/Dockerfile --build-arg BASE_IMAGE=${{ inputs.base_image || 'node:22-alpine' }} -t "$IMAGE" .
+
+      # Pin third-party actions by FULL COMMIT SHA: in March 2026 (CVE-2026-33634) 76 of 77 trivy-action
+      # tags were force-pushed to malicious commits. ed142fd... = v0.36.0.
+      - name: Trivy scan -> SARIF (all severities, never fails)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          format: sarif
+          output: trivy-image.sarif
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true                 # only findings that have a fixed version
+
+      - name: Upload SARIF to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+          category: l15-trivy-image
+
+      - name: Trivy gate (table, fail on CRITICAL)
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ${{ env.IMAGE }}
+          format: table
+          severity: CRITICAL
+          ignore-unfixed: true
+          exit-code: "1"                       # non-zero -> job fails -> PR/check blocked
+          skip-setup-trivy: true               # trivy already installed by the previous step
+
+  msdo:
+    # Microsoft Security DevOps action: one CLI that runs several open-source scanners and
+    # produces ONE SARIF that Defender for Cloud also understands.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4          # MSDO CLI needs .NET
+        with:
+          dotnet-version: "8.0.x"
+      - name: Run Microsoft Security DevOps
+        id: msdo
+        uses: microsoft/security-devops-action@v1
+        with:
+          tools: templateanalyzer,checkov,trivy   # IaC + container/Dockerfile scanners
+      - name: Upload MSDO SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: ${{ steps.msdo.outputs.sarifFile }}
+          category: l15-msdo

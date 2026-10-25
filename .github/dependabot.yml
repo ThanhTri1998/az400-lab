@@ -1,0 +1,26 @@
+# L15: Dependabot VERSION updates (dependabot.yml) - separate from Dependabot ALERTS and SECURITY updates,
+# which are repo settings (Settings > Advanced Security), not this file.
+version: 2
+updates:
+  - package-ecosystem: "npm"            # reads package.json / package-lock.json
+    directory: "/"                      # where the manifest lives
+    schedule:
+      interval: "weekly"                # daily | weekly | monthly | quarterly | semiannually | yearly | cron
+      day: "monday"
+      timezone: "Asia/Ho_Chi_Minh"
+    open-pull-requests-limit: 2         # max open version-update PRs for this ecosystem (security PRs not counted)
+    labels: ["dependencies", "l15"]
+    commit-message:
+      prefix: "deps"
+    groups:                             # bundle minor/patch bumps of dev tools into ONE PR
+      dev-tools:
+        dependency-type: "development"
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions" # keeps `uses: owner/action@vX` in .github/workflows up to date
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 2
+    labels: ["dependencies", "l15"]
