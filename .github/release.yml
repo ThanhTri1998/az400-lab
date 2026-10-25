@@ -1,0 +1,14 @@
+# Categories for automatically generated release notes
+changelog:
+  exclude:
+    labels: [ignore-for-release]
+    authors: [dependabot]
+  categories:
+    - title: Bug fixes
+      labels: [bug]
+    - title: New features
+      labels: [enhancement]
+    - title: Documentation
+      labels: [documentation]
+    - title: Other changes
+      labels: ["*"]
