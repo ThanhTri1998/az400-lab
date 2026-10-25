@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Questions
+    url: https://github.com/ThanhTri1998/az400-lab/issues?q=label%3Aquestion
+    about: Search existing questions before opening a new issue.
