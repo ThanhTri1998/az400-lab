@@ -1,0 +1,65 @@
+# L10: build the app image -> push to GitHub Container Registry -> deploy to Azure Web App for Containers
+# Auth: GITHUB_TOKEN (packages: write) for GHCR; OIDC (no secret) for Azure via environment l10-azure.
+name: l10-container
+on:
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Also deploy to Azure (needs the l10 web app to exist)"
+        type: boolean
+        default: false
+      webapp:
+        description: "Web App for Containers name"
+        default: "app-az400-10-ctr-fee007"
+permissions:
+  contents: read
+env:
+  IMAGE: ghcr.io/thanhtri1998/az400-lab-l10     # GHCR image names must be lowercase
+jobs:
+  build-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write                            # push to ghcr.io with GITHUB_TOKEN
+    outputs:
+      tag: ${{ steps.meta.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+      - id: meta
+        run: echo "tag=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push (immutable tag = short SHA)
+        run: |
+          docker build -f l10/Dockerfile -t "$IMAGE:${{ steps.meta.outputs.tag }}" -t "$IMAGE:latest" .
+          docker push "$IMAGE:${{ steps.meta.outputs.tag }}"
+          docker push "$IMAGE:latest"
+
+  deploy:
+    if: ${{ inputs.deploy }}
+    needs: build-push
+    runs-on: ubuntu-latest
+    environment: l10-azure                       # OIDC subject ...:environment:l10-azure
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ inputs.webapp }}
+          images: ${{ env.IMAGE }}:${{ needs.build-push.outputs.tag }}   # deploy by immutable tag, never :latest
+      - name: Smoke test
+        run: |
+          for i in $(seq 1 18); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' https://${{ inputs.webapp }}.azurewebsites.net/health || true)
+            echo "try $i -> $code"; [ "$code" = "200" ] && break; sleep 10
+          done
+          curl -s https://${{ inputs.webapp }}.azurewebsites.net/ ; echo
