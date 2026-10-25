@@ -30,7 +30,6 @@
     "jest-junit": "^16.0.0"
   },
   "dependencies": {
-    "chessground": "9.2.1",
     "lodash": "4.17.15"
   }
 }
