@@ -1,0 +1,16 @@
+{
+  "name": "@thanhtri1998/pricing",
+  "version": "0.0.0",
+  "description": "Pricing helpers - AZ-400 lesson 06 sample package (GitHub Packages)",
+  "main": "index.js",
+  "files": ["index.js"],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ThanhTri1998/az400-lab.git",
+    "directory": "packages/pricing"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  }
+}

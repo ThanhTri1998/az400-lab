@@ -1,0 +1,47 @@
+# AZ-400 lesson 06 - publish @thanhtri1998/pricing to GitHub Packages (npm registry)
+# Version comes from the input (manual run) or from a tag pricing-vX.Y.Z
+name: l06-publish-package
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'SemVer version to publish (e.g. 1.0.0 or 1.1.0-beta.1)'
+        required: true
+      tag:
+        description: 'npm dist-tag (latest, beta, next)'
+        default: latest
+  push:
+    tags: ['pricing-v*']
+
+permissions:
+  contents: read
+  packages: write            # GITHUB_TOKEN may publish packages linked to this repo
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        registry-url: https://npm.pkg.github.com   # writes an .npmrc that reads NODE_AUTH_TOKEN
+        scope: '@thanhtri1998'
+    - name: Compute version
+      id: ver
+      run: |
+        if [ "${{ github.event_name }}" = "push" ]; then
+          v="${GITHUB_REF_NAME#pricing-v}"; t=latest
+          case "$v" in *-*) t=next;; esac          # pre-release tags never become 'latest'
+        else
+          v="${{ inputs.version }}"; t="${{ inputs.tag }}"
+        fi
+        echo "version=$v" >> "$GITHUB_OUTPUT"; echo "tag=$t" >> "$GITHUB_OUTPUT"
+        echo "Publishing $v with dist-tag $t"
+    - name: npm publish
+      working-directory: packages/pricing
+      run: |
+        npm version "${{ steps.ver.outputs.version }}" --no-git-tag-version
+        npm publish --tag "${{ steps.ver.outputs.tag }}"
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
