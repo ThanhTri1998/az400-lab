@@ -1,0 +1,32 @@
+{
+  "name": "az400-app",
+  "version": "1.0.0",
+  "description": "Sample Node.js app shared by the AZ-400 labs",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "jest",
+    "test:ci": "jest --ci --reporters=default --reporters=jest-junit --coverage"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "coverageReporters": [
+      "cobertura",
+      "text-summary",
+      "html"
+    ],
+    "coverageDirectory": "coverage"
+  },
+  "jest-junit": {
+    "outputDirectory": "test-results",
+    "outputName": "junit.xml"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "jest-junit": "^16.0.0"
+  }
+}
