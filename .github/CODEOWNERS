@@ -1,0 +1,4 @@
+# Bài 04: CODEOWNERS chỉ nằm trên branch l04/main (base branch của PR demo)
+*                  @ThanhTri1998
+/lessons/l04/      @ThanhTri1998
+/.github/          @ThanhTri1998
