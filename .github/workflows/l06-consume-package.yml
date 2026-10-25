@@ -1,0 +1,34 @@
+# AZ-400 lesson 06 - consume @thanhtri1998/pricing from GitHub Packages
+name: l06-consume-package
+on: workflow_dispatch
+
+permissions:
+  contents: read
+  packages: read             # enough to install packages linked to this repo
+
+jobs:
+  consume:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 20
+        registry-url: https://npm.pkg.github.com
+        scope: '@thanhtri1998'
+    - name: Inspect versions and dist-tags
+      run: npm view @thanhtri1998/pricing versions dist-tags
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Install latest and next
+      run: |
+        mkdir demo && cd demo && npm init -y >/dev/null
+        npm install @thanhtri1998/pricing            # dist-tag latest
+        node -e "console.log('latest ->', require('@thanhtri1998/pricing/package.json').version, require('@thanhtri1998/pricing').applyDiscount(200, 15))"
+        npm install @thanhtri1998/pricing@next       # pre-release only when asked
+        node -e "console.log('next   ->', require('@thanhtri1998/pricing/package.json').version)"
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: List package versions via REST API
+      run: gh api "/users/${{ github.repository_owner }}/packages/npm/pricing/versions" --jq '.[] | "\(.name)  \(.created_at)"'
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -7,7 +7,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ThanhTri1998/az400-lab.git",
+    "url": "git+https://github.com/ThanhTri1998/az400-lab.git",
     "directory": "packages/pricing"
   },
   "publishConfig": {
