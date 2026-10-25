@@ -18,7 +18,7 @@ jobs:
     runs-on: [ self-hosted, macOS, ARM64 ]   # every label must match
     steps:
     - uses: actions/checkout@v4
-    - uses: actions/download-artifact@v4
+    - uses: actions/download-artifact@v8
       with: { name: build-info }
     - run: |
         echo "runner=${{ runner.name }} os=${{ runner.os }} arch=${{ runner.arch }}"
