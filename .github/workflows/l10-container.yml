@@ -14,7 +14,7 @@ on:
 permissions:
   contents: read
 env:
-  IMAGE: ghcr.io/thanhtri1998/az400-lab-l10     # GHCR image names must be lowercase
+  IMAGE: ghcr.io/thanhtri1998/az400-lab     # GHCR image names must be lowercase
 jobs:
   build-push:
     runs-on: ubuntu-latest
