@@ -16,8 +16,12 @@ resource sa 'Microsoft.Storage/storageAccounts@2025-01-01' = {
     minimumTlsVersion: 'TLS1_2'
     supportsHttpsTrafficOnly: true
     allowBlobPublicAccess: false
-    allowSharedKeyAccess: true // lab: để true cho đơn giản; production nên false + dùng Entra ID
+    allowSharedKeyAccess: false // PSRule Azure.Storage.LocalAuth: tắt access key, dùng Entra ID
     accessTier: 'Hot'
+    networkAcls: {
+      defaultAction: 'Deny' // PSRule Azure.Storage.Firewall: chỉ nhận traffic được cho phép
+      bypass: 'AzureServices'
+    }
   }
 }
 
