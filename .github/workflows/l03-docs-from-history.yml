@@ -1,0 +1,27 @@
+# AZ-400 L03: generate release notes from git history (manual run only)
+name: l03-docs-from-history
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Start ref (tag/commit). Empty = previous l03-v* tag or first commit"
+        required: false
+permissions:
+  contents: read
+jobs:
+  notes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0          # full history + tags; default depth 1 would show a single commit
+      - name: Generate release notes
+        run: |
+          FROM="${{ inputs.from }}"
+          [ -z "$FROM" ] && FROM=$(git describe --tags --abbrev=0 --match 'l03-v*' 2>/dev/null || git rev-list --max-parents=0 HEAD)
+          bash scripts/release-notes.sh "$FROM" HEAD "run-${{ github.run_number }}" > release-notes.md
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-notes
+          path: release-notes.md
