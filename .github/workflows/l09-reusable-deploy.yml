@@ -31,7 +31,9 @@ jobs:
         echo "Deploying ${{ inputs.version }} to ${{ inputs.environment }}"
         echo "APP_NAME (repo variable) = ${{ vars.APP_NAME }}"
         echo "DEPLOY_TARGET (environment variable) = ${{ vars.DEPLOY_TARGET }}"
-        echo "api-key length = ${#API_KEY}"
+        echo "secrets.api-key length      = ${#API_KEY}"
+        echo "secrets.FAKE_API_KEY length = ${#FAKE}   (environment secret wins over repo secret)"
         echo "url=https://example.invalid/${{ inputs.environment }}" >> "$GITHUB_OUTPUT"
       env:
         API_KEY: ${{ secrets.api-key }}
+        FAKE: ${{ secrets.FAKE_API_KEY }}     # only resolvable when caller uses `secrets: inherit`

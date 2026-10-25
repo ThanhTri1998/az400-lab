@@ -23,7 +23,8 @@ jobs:
     with:
       environment: l09-dev
       version: ${{ needs.build.outputs.version }}
-    secrets: inherit                                   # pass all caller secrets (only works in same org/enterprise)
+    secrets:
+      api-key: ${{ secrets.FAKE_API_KEY }}             # explicit: the REPOSITORY secret value
 
   deploy-prod:
     needs: [build, deploy-dev]
@@ -31,8 +32,8 @@ jobs:
     with:
       environment: l09-prod                            # has a required reviewer
       version: ${{ needs.build.outputs.version }}
-    secrets:
-      api-key: ${{ secrets.FAKE_API_KEY }}             # environment secret of l09-prod
+    secrets: inherit                                   # all caller secrets; env secrets of l09-prod are
+                                                       # resolved inside the reusable job (it has `environment:`)
 
   report:
     needs: deploy-prod
