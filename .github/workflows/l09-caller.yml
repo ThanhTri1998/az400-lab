@@ -1,0 +1,41 @@
+# AZ-400 lesson 09 - caller: composite action (steps) + reusable workflow (jobs) + environments
+name: l09-caller
+on: workflow_dispatch
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.setup.outputs.version }}
+    steps:
+    - uses: actions/checkout@v4
+    - id: setup
+      uses: ./.github/actions/setup-and-test     # local composite action (needs checkout first)
+      with:
+        node-version: '20'
+
+  deploy-dev:
+    needs: build
+    uses: ./.github/workflows/l09-reusable-deploy.yml   # reusable workflow: no runs-on / steps here
+    with:
+      environment: l09-dev
+      version: ${{ needs.build.outputs.version }}
+    secrets: inherit                                   # pass all caller secrets (only works in same org/enterprise)
+
+  deploy-prod:
+    needs: [build, deploy-dev]
+    uses: ./.github/workflows/l09-reusable-deploy.yml
+    with:
+      environment: l09-prod                            # has a required reviewer
+      version: ${{ needs.build.outputs.version }}
+    secrets:
+      api-key: ${{ secrets.FAKE_API_KEY }}             # environment secret of l09-prod
+
+  report:
+    needs: deploy-prod
+    runs-on: ubuntu-latest
+    steps:
+    - run: echo "prod url from reusable workflow output = ${{ needs.deploy-prod.outputs.deployed-url }}"

@@ -1,0 +1,28 @@
+# Composite action: a reusable group of STEPS (runs inside the caller's job)
+name: 'Setup Node and test'
+description: 'Install Node, run npm ci and (optionally) npm test'
+inputs:
+  node-version:
+    description: 'Node.js version'
+    default: '20'
+  run-tests:
+    description: 'Run npm test'
+    default: 'true'
+outputs:
+  version:
+    description: 'Version computed from package.json + run number'
+    value: ${{ steps.ver.outputs.version }}
+runs:
+  using: composite
+  steps:
+  - uses: actions/setup-node@v4
+    with:
+      node-version: ${{ inputs.node-version }}
+  - run: npm ci
+    shell: bash                # 'shell' is REQUIRED for run steps in a composite action
+  - if: inputs.run-tests == 'true'
+    run: npm test -- --ci
+    shell: bash
+  - id: ver
+    run: echo "version=$(node -p "require('./package.json').version").${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+    shell: bash
