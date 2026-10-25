@@ -23,7 +23,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - uses: actions/setup-node@v4
       with: { node-version: 20 }
     - run: for f in src/*.js; do node --check "$f" && echo "OK $f"; done
@@ -38,7 +38,7 @@ jobs:
     outputs:
       testedOn: ${{ steps.setvar.outputs.testedOn }}   # matrix: the value of the LAST leg to finish wins
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - uses: actions/setup-node@v4
       with: { node-version: '${{ matrix.node }}', cache: npm }
     - run: npm ci && npm test -- --ci
@@ -50,14 +50,14 @@ jobs:
     runs-on: ubuntu-latest
     container: node:22               # steps run inside this container
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - run: node -v && npm ci && npx jest --ci
 
   package:
     needs: [ lint, unit-test ]        # like dependsOn
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v7
     - run: echo "Unit tests ran on ${{ needs.unit-test.outputs.testedOn }}"
     - if: ${{ inputs.failPackage }}
       run: exit 1

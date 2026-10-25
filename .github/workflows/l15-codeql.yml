@@ -18,7 +18,7 @@ jobs:
     name: CodeQL (runner VM)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript      # interpreted language -> build-mode: none (no build needed)
@@ -36,7 +36,7 @@ jobs:
     container:
       image: node:20                            # full Debian image: has git, curl, tar that CodeQL needs
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"   # repo owned by another uid in container
       - run: node --version && cat /etc/os-release | head -2
       - uses: github/codeql-action/init@v4
