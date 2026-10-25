@@ -18,4 +18,8 @@ describe('totalWithTax', () => {
   test('adds 10% tax by default', () => {
     expect(totalWithTax([{ price: 10, qty: 2 }, { price: 5, qty: 1 }])).toBe(27.5);
   });
+
+  test('rejects a negative quantity', () => {
+    expect(() => totalWithTax([{ price: 10, qty: -2 }])).toThrow('non-negative integer');
+  });
 });

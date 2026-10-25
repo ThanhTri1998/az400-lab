@@ -7,6 +7,9 @@ function applyDiscount(price, percent) {
 }
 
 function totalWithTax(items, taxRate = 0.1) {
+  if (items.some((i) => !Number.isInteger(i.qty) || i.qty < 0)) {
+    throw new Error('qty must be a non-negative integer');
+  }
   const subtotal = items.reduce((sum, i) => sum + i.price * i.qty, 0);
   return Math.round(subtotal * (1 + taxRate) * 100) / 100;
 }
