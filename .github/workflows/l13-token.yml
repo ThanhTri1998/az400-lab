@@ -1,0 +1,50 @@
+# L13 - GITHUB_TOKEN: default permissions vs explicit `permissions:` (least privilege)
+name: l13-token
+on: workflow_dispatch
+
+jobs:
+  default-token:
+    # no `permissions:` key -> repo/org default (this repo: "Read repository contents and packages")
+    runs-on: ubuntu-latest
+    steps:
+      - name: Try to create an issue with the DEFAULT token
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh issue create --title "l13 default token" --body "should fail" 2>&1 || echo "=> FAILED as expected (default = read)"
+
+  contents-read:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Read works (checkout above succeeded); write to issues does not
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls package.json
+          gh issue create --title "l13 contents read" --body "should fail" 2>&1 || echo "=> FAILED as expected (no issues:write)"
+      - name: Token is scoped to THIS repo only (admin endpoints denied)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api repos/${{ github.repository }}/collaborators 2>&1 | head -3 || true
+
+  issues-write:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Create issue, comment, close (issues:write)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          URL=$(gh issue create --title "l13 GITHUB_TOKEN demo (run ${{ github.run_id }})" --body "Created by GITHUB_TOKEN with issues: write")
+          echo "created: $URL"
+          gh issue comment "$URL" --body "comment from github-actions[bot]"
+          gh issue close "$URL" --reason completed
+          gh issue view "$URL" --json author,state --jq '"author=\(.author.login) state=\(.state)"'
