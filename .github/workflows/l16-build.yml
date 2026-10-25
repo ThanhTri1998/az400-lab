@@ -1,0 +1,21 @@
+# L16 - a tiny "build" that can fail on purpose. Watched by l16-alert-on-failure.yml (workflow_run).
+name: L16 build
+on:
+  workflow_dispatch:
+    inputs:
+      fail:
+        description: Fail on purpose
+        type: boolean
+        default: false
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Building commit $GITHUB_SHA"
+      - name: Fail on purpose
+        if: ${{ inputs.fail }}
+        run: |
+          echo "::error title=L16::Simulated build failure"
+          exit 1

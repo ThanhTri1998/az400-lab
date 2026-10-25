@@ -1,0 +1,29 @@
+# L16 - alert when "L16 build" fails: open a GitHub issue (could also POST to Teams/Slack webhook).
+# workflow_run only fires for workflow files on the DEFAULT branch.
+name: L16 alert on failure
+on:
+  workflow_run:
+    workflows: ["L16 build"]
+    types: [completed]
+permissions:
+  issues: write
+  actions: read
+jobs:
+  open-issue:
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Open an issue for the failed run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          RUN_NAME: ${{ github.event.workflow_run.name }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          BRANCH: ${{ github.event.workflow_run.head_branch }}
+          SHA: ${{ github.event.workflow_run.head_sha }}
+          ACTOR: ${{ github.event.workflow_run.actor.login }}
+        run: |
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "CI failure: $RUN_NAME #$RUN_ID on $BRANCH" \
+            --body "Workflow **$RUN_NAME** failed. Run: $RUN_URL
+          Commit: \`$SHA\` · triggered by @$ACTOR"
