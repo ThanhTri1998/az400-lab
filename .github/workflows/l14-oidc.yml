@@ -1,0 +1,58 @@
+# L14 - Secretless login GitHub Actions -> Azure (OIDC / workload identity federation)
+# Identity: user-assigned managed identity id-az400-pipelines (Contributor on rg-az400-shared only)
+# Federated credential subject: repo:ThanhTri1998/az400-lab:environment:l14-azure
+# IDs are GitHub *variables* (vars.*), not secrets: they are identifiers, useless without a trusted OIDC token.
+name: l14-oidc
+on: workflow_dispatch
+
+permissions:
+  id-token: write     # request the OIDC token
+  contents: read
+
+jobs:
+  login-with-environment:
+    runs-on: ubuntu-latest
+    environment: l14-azure            # => token sub = repo:ThanhTri1998/az400-lab:environment:l14-azure (matches)
+    steps:
+      - name: Show OIDC claims (non-secret: sub, aud, iss)
+        run: |
+          TOKEN=$(curl -s -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" \
+            "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" | jq -r .value)
+          echo "$TOKEN" | cut -d. -f2 | tr '_-' '/+' | base64 -d 2>/dev/null | jq '{iss, sub, aud, environment, ref, exp}' || true
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      - name: Use Azure without any stored secret
+        run: |
+          az account show --query "{subscription:name, userType:user.type}" -o json
+          az group show -n rg-az400-shared --query "{name:name, location:location}" -o table
+
+  login-without-environment:
+    runs-on: ubuntu-latest
+    continue-on-error: true           # expected to FAIL: sub = repo:ThanhTri1998/az400-lab:ref:refs/heads/main (no matching federated credential)
+    steps:
+      - uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+  secrets-and-masking:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Repository secret is masked automatically
+        env:
+          API_KEY: ${{ secrets.L14_FAKE_API_KEY }}     # obviously fake value set with gh secret set
+        run: |
+          echo "API_KEY = $API_KEY"
+          echo "length  = ${#API_KEY}"
+      - name: Values from elsewhere need ::add-mask::
+        run: |
+          RUNTIME_VALUE="rt-$(openssl rand -hex 6)"     # throwaway random value, not a real secret
+          echo "before add-mask: $RUNTIME_VALUE"
+          echo "::add-mask::$RUNTIME_VALUE"
+          echo "after add-mask : $RUNTIME_VALUE"
+      - name: Variables are NOT masked (do not put secrets in vars)
+        run: echo "client id variable = ${{ vars.AZURE_CLIENT_ID }}" | sed -E 's/[0-9a-f]{8}-[0-9a-f-]{27}/<guid-redacted-by-sed>/'
